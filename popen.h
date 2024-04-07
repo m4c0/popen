@@ -134,7 +134,7 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
     close(perr[0]);
     dup2(pout[1], 1);
     dup2(perr[1], 2);
-    execv(cmd_line[0], cmd_line + 1);
+    execvp(cmd_line[0], cmd_line);
     return -1;
   }
 
