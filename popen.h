@@ -81,7 +81,9 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
 
   char buf[10240];
   buf[0] = 0;
-  while (**cmd_line) {
+  while (*cmd_line) {
+    if (buf[0] != 0)
+      strcat_s(buf, sizeof(buf), " ");
     strcat_s(buf, sizeof(buf), *cmd_line);
     cmd_line++;
   }
