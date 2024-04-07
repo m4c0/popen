@@ -20,6 +20,7 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err);
 
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
+#include <io.h>
 #include <windows.h>
 
 static int proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
@@ -73,6 +74,19 @@ static int proc__create_pipes(HANDLE *outs, HANDLE *errs) {
 
   return 0;
 }
+static int proc__fdopen(HANDLE h, FILE **f) {
+  int fd = _open_osfhandle((intptr_t)h, 0);
+  if (fd < 0) {
+    POPEN_ERROR("failed to transform Windows HANDLE into FD");
+    return 1;
+  }
+  *f = _fdopen(fd, "r");
+  if (*f == NULL) {
+    POPEN_ERROR("failed to transform FD into FILE");
+    return 1;
+  }
+  return 0;
+}
 int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
   HANDLE outs[2];
   HANDLE errs[2];
@@ -88,6 +102,11 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
     cmd_line++;
   }
   if (0 != proc__create_process(buf, outs[1], errs[1]))
+    return 1;
+
+  if (0 != proc__fdopen(outs[0], out))
+    return 1;
+  if (0 != proc__fdopen(errs[0], err))
     return 1;
 
   return 0;
