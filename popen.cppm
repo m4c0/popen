@@ -27,7 +27,7 @@ public:
   [[nodiscard]] bool gets() {
     return fgets(m_last_line, sizeof(m_last_line) - 1, m_out);
   }
-  [[nodiscard]] bool gets_err(char *buffer, unsigned size) {
+  [[nodiscard]] bool gets_err() {
     return fgets(m_last_line, sizeof(m_last_line) - 1, m_err);
   }
 };
