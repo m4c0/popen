@@ -12,25 +12,15 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  FILE *out;
-  FILE *err;
-
   char *args[3];
   args[0] = argv[0];
   args[1] = "x";
   args[2] = 0;
 
-  int res = p::open(args, &out, &err);
-  printf("popen returned %d\n", res);
-
-  char buf[1024];
-  while (fgets(buf, sizeof(buf), out)) {
-    printf("> %s", buf);
+  p::proc proc{args};
+  while (proc.gets()) {
+    printf("> %s", proc.last_line_read());
   }
   printf("popen ended\n");
-
-  fclose(out);
-  fclose(err);
-
   return 0;
 }
