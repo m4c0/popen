@@ -1,17 +1,15 @@
 #ifndef POPEN_H
 #define POPEN_H
-#include <stdio.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdio.h>
 
-int proc_open(char *const *cmd_line, FILE **out, FILE **err);
+extern int proc_open(char *const *cmd_line, FILE **out, FILE **err);
 
 #ifdef __cplusplus
 }
 #endif
-#endif // POPEN_H
 
 #ifdef POPEN_IMPLEMENTATION
 #ifndef POPEN_ERROR
@@ -147,6 +145,7 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
 }
 #endif // !_WIN32
 #endif // POPEN_IMPLEMENTATION
+#endif // POPEN_H
 
 // MIT License
 //
