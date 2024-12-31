@@ -7,7 +7,7 @@ int main(int argc, char ** argv) {
     printf("hello from child stdout\n");
     printf("how are you today?\n");
     printf("I know I'm fine because ");
-    return 0;
+    return 3;
   }
 
   FILE *out;
@@ -17,14 +17,14 @@ int main(int argc, char ** argv) {
   args[0] = argv[0];
   args[1] = "x";
   args[2] = 0;
-  int res = proc_open(args, &out, &err);
-  printf("popen returned %d\n", res);
+  void * res = proc_open(args, &out, &err);
+  printf("popen returned %p\n", res);
 
   char buf[1024];
   while (fgets(buf, sizeof(buf), out)) {
     printf("> %s", buf);
   }
-  printf("popen ended\n");
+  printf("popen ended %d\n", proc_wait(res));
 
   fclose(out);
   fclose(err);

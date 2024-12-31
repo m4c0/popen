@@ -5,7 +5,8 @@ extern "C" {
 #endif
 #include <stdio.h>
 
-extern int proc_open(char *const *cmd_line, FILE **out, FILE **err);
+extern void * proc_open(char *const *cmd_line, FILE **out, FILE **err);
+extern int    proc_wait(void * p);
 
 #ifdef __cplusplus
 }
@@ -21,7 +22,7 @@ extern int proc_open(char *const *cmd_line, FILE **out, FILE **err);
 #include <io.h>
 #include <windows.h>
 
-static int proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
+static HANDLE proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
   PROCESS_INFORMATION pi;
   ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
@@ -35,7 +36,7 @@ static int proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
   if (!CreateProcess(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si,
                      &pi)) {
     POPEN_ERROR("failed to create child process");
-    return 1;
+    return nullptr;
   }
 
   CloseHandle(pi.hProcess);
@@ -43,7 +44,7 @@ static int proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
 
   CloseHandle(out);
   CloseHandle(err);
-  return 0;
+  return pi.hProcess;
 }
 static int proc__create_pipes(HANDLE *outs, HANDLE *errs) {
   SECURITY_ATTRIBUTES attr;
@@ -85,11 +86,10 @@ static int proc__fdopen(HANDLE h, FILE **f) {
   }
   return 0;
 }
-int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
+void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
   HANDLE outs[2];
   HANDLE errs[2];
-  if (0 != proc__create_pipes(outs, errs))
-    return 1;
+  if (0 != proc__create_pipes(outs, errs)) return nullptr;
 
   char buf[10240];
   buf[0] = 0;
@@ -99,32 +99,37 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
     strcat_s(buf, sizeof(buf), *cmd_line);
     cmd_line++;
   }
-  if (0 != proc__create_process(buf, outs[1], errs[1]))
-    return 1;
+  HANDLE res = proc__create_process(buf, outs[1], errs[1]);
+  if (!res) return nullptr;
 
-  if (0 != proc__fdopen(outs[0], out))
-    return 1;
-  if (0 != proc__fdopen(errs[0], err))
-    return 1;
+  if (0 != proc__fdopen(outs[0], out)) return nullptr;
+  if (0 != proc__fdopen(errs[0], err)) return nullptr;
 
-  return 0;
+  return res;
+}
+
+int proc_wait(void * handle) {
+  HANDLE h = (HANDLE)handle;
+  while (GetExitCodeProcess(h) == STILL_ACTIVE) Sleep(100);
+  return GetExitCodeProcess(h);;
 }
 
 #else // !_WIN32
+#include <sys/wait.h>
 #include <unistd.h>
 
-int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
+void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
   int pout[2];
   if (0 != pipe(pout))
-    return -1;
+    return 0;
 
   int perr[2];
   if (0 != pipe(perr))
-    return -1;
+    return 0;
 
-  int pid = fork();
+  pid_t pid = fork();
   if (pid < 0) {
-    return -1;
+    return 0;
   }
   if (pid == 0) {
     close(0);
@@ -133,7 +138,7 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
     dup2(pout[1], 1);
     dup2(perr[1], 2);
     execvp(cmd_line[0], cmd_line);
-    return -1;
+    return 0;
   }
 
   close(pout[1]);
@@ -141,8 +146,15 @@ int proc_open(char *const *cmd_line, FILE **out, FILE **err) {
 
   *out = fdopen(pout[0], "r");
   *err = fdopen(perr[0], "r");
-  return 0;
+  return (void *)(size_t)pid;
 }
+
+int proc_wait(void * handle) {
+  int status;
+  waitpid((pid_t)(size_t) handle, &status, 0);
+  return WEXITSTATUS(status);
+}
+
 #endif // !_WIN32
 #endif // POPEN_IMPLEMENTATION
 #endif // POPEN_H
