@@ -24,7 +24,7 @@ public:
     fclose(m_err);
   }
 
-  [[nodiscard]] auto exit_code() const { return p::wait(m_handle); }
+  [[nodiscard]] auto wait() const { return p::wait(m_handle); }
 
   [[nodiscard]] const char *last_line_read() const { return m_last_line; }
 
