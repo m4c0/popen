@@ -22,6 +22,6 @@ int main(int argc, char **argv) {
   while (proc.gets()) {
     printf("> %s", proc.last_line_read());
   }
-  printf("popen ended with code: %d\n", proc.exit_code());
+  printf("popen ended with code: %d\n", proc.wait());
   return 0;
 }

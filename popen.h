@@ -39,7 +39,6 @@ static HANDLE proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
     return nullptr;
   }
 
-  CloseHandle(pi.hProcess);
   CloseHandle(pi.hThread);
 
   CloseHandle(out);
@@ -110,8 +109,11 @@ void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
 
 int proc_wait(void * handle) {
   HANDLE h = (HANDLE)handle;
-  while (GetExitCodeProcess(h) == STILL_ACTIVE) Sleep(100);
-  return GetExitCodeProcess(h);;
+  DWORD res = STILL_ACTIVE;
+  WaitForSingleObject(h, INFINITE);
+  GetExitCodeProcess(h, &res);
+  CloseHandle(h);
+  return res;
 }
 
 #else // !_WIN32
