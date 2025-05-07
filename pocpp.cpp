@@ -1,15 +1,15 @@
 #pragma leco tool
 
-#include <stdio.h>
 #include <string.h>
 
 import popen;
+import print;
 
 int main(int argc, char **argv) {
   if (argc > 1) {
-    printf("hello from child stdout\n");
-    printf("how are you today?\n");
-    printf("I know I'm fine because ");
+    putln("hello from child stdout");
+    putln("how are you today?");
+    put("I know I'm fine because ");
     return 3;
   }
 
@@ -20,8 +20,8 @@ int main(int argc, char **argv) {
 
   p::proc proc{args};
   while (proc.gets()) {
-    printf("> %s", proc.last_line_read());
+    put("> ", proc.last_line_read());
   }
-  printf("popen ended with code: %d\n", proc.wait());
+  putln("popen ended with code: ", proc.wait());
   return 0;
 }
