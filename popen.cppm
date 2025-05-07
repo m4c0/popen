@@ -5,12 +5,13 @@ extern "C" void popen_perror(const char *);
 #include "popen.h"
 
 export module popen;
+import no;
 
 namespace p {
 export constexpr const auto open = proc_open;
 export constexpr const auto wait = proc_wait;
 
-export class proc {
+export class proc : no::no {
   FILE *m_out{};
   FILE *m_err{};
   void *m_handle{};
