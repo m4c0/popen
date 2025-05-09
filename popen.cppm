@@ -8,9 +8,6 @@ export module popen;
 import no;
 
 namespace p {
-export constexpr const auto open = proc_open;
-export constexpr const auto wait = proc_wait;
-
 static constexpr const auto cstr_buf_size = 10240;
 
 struct cstr : no::no {
@@ -30,9 +27,13 @@ export class proc {
   void * m_handle;
 
 public:
-  explicit proc(char *const *cmd_line) : m_handle { p::open(cmd_line, &m_out.h, &m_err.h) } {}
+  explicit proc(auto... args)
+    : m_out {}
+    , m_err {}
+    , m_handle { proc_open(&m_out.h, &m_err.h, args..., 0) }
+  {}
 
-  [[nodiscard]] auto wait() const { return p::wait(m_handle); }
+  [[nodiscard]] auto wait() const { return proc_wait(m_handle); }
 
   [[nodiscard]] const char * last_line_read() const { return m_last_line.buf; }
 

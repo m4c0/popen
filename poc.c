@@ -13,11 +13,7 @@ int main(int argc, char ** argv) {
   FILE *out;
   FILE *err;
 
-  char *args[3];
-  args[0] = argv[0];
-  args[1] = "x";
-  args[2] = 0;
-  void * res = proc_open(args, &out, &err);
+  void * res = proc_open(&out, &err, argv[0], "x", 0);
   printf("popen returned %p\n", res);
 
   char buf[1024];

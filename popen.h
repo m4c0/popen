@@ -5,7 +5,7 @@ extern "C" {
 #endif
 #include <stdio.h>
 
-extern void * proc_open(char *const *cmd_line, FILE **out, FILE **err);
+extern void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...);
 extern int    proc_wait(void * p);
 
 #ifdef __cplusplus
@@ -118,9 +118,12 @@ int proc_wait(void * handle) {
 
 #else // !_WIN32
 #include <sys/wait.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
+void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
   int pout[2];
   if (0 != pipe(pout))
     return 0;
@@ -139,7 +142,20 @@ void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
     close(perr[0]);
     dup2(pout[1], 1);
     dup2(perr[1], 2);
-    execvp(cmd_line[0], cmd_line);
+
+    char ** args = (char **)malloc(sizeof(char *) * 1024);
+    char ** argp = args + 1;
+    args[0] = strdup(argv0);
+
+    va_list va;
+    va_start(va, argv0);
+    const char * arg;
+    while ((arg = va_arg(va, const char *))) *argp++ = strdup(arg);
+    va_end(va);
+
+    *argp = 0;
+
+    execvp(argv0, args);
     return 0;
   }
 

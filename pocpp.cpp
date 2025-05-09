@@ -13,12 +13,7 @@ int main(int argc, char **argv) {
     return 3;
   }
 
-  char *args[3];
-  args[0] = argv[0];
-  args[1] = strdup("x");
-  args[2] = 0;
-
-  p::proc proc{args};
+  p::proc proc { argv[0], "X" };
   while (proc.gets()) {
     put("> ", proc.last_line_read());
   }
