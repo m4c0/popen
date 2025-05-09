@@ -36,7 +36,7 @@ static HANDLE proc__create_process(char *cmd_line, HANDLE out, HANDLE err) {
   if (!CreateProcess(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si,
                      &pi)) {
     POPEN_ERROR("failed to create child process");
-    return nullptr;
+    return NULL;
   }
 
   CloseHandle(pi.hThread);
@@ -85,24 +85,28 @@ static int proc__fdopen(HANDLE h, FILE **f) {
   }
   return 0;
 }
-void * proc_open(char *const *cmd_line, FILE **out, FILE **err) {
+void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
   HANDLE outs[2];
   HANDLE errs[2];
-  if (0 != proc__create_pipes(outs, errs)) return nullptr;
+  if (0 != proc__create_pipes(outs, errs)) return NULL;
 
   char buf[10240];
-  buf[0] = 0;
-  while (*cmd_line) {
-    if (buf[0] != 0)
-      strcat_s(buf, sizeof(buf), " ");
-    strcat_s(buf, sizeof(buf), *cmd_line);
-    cmd_line++;
-  }
-  HANDLE res = proc__create_process(buf, outs[1], errs[1]);
-  if (!res) return nullptr;
+  strcpy_s(buf, sizeof(buf), argv0);
 
-  if (0 != proc__fdopen(outs[0], out)) return nullptr;
-  if (0 != proc__fdopen(errs[0], err)) return nullptr;
+  va_list va;
+  va_start(va, argv0);
+  const char * arg;
+  while ((arg = va_arg(va, const char *))) {
+    strcat_s(buf, sizeof(buf), " ");
+    strcat_s(buf, sizeof(buf), arg);
+  }
+  va_end(va);
+
+  HANDLE res = proc__create_process(buf, outs[1], errs[1]);
+  if (!res) return NULL;
+
+  if (0 != proc__fdopen(outs[0], out)) return NULL;
+  if (0 != proc__fdopen(errs[0], err)) return NULL;
 
   return res;
 }

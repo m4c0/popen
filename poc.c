@@ -1,3 +1,4 @@
+#pragma leco tool
 #define POPEN_ERROR(x) printf("error: %s\n", (x))
 #define POPEN_IMPLEMENTATION
 #include "popen.h"
