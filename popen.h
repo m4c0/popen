@@ -7,6 +7,7 @@ extern "C" {
 
 extern void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...);
 extern int    proc_wait(void * p);
+extern int    proc_wait_any(void ** ps, int * n);
 
 #ifdef __cplusplus
 }
@@ -111,13 +112,25 @@ void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated 
   return res;
 }
 
-int proc_wait(void * handle) {
+int proc__wait(void * handle) {
   HANDLE h = (HANDLE)handle;
   DWORD res = STILL_ACTIVE;
-  WaitForSingleObject(h, INFINITE);
   GetExitCodeProcess(h, &res);
   CloseHandle(h);
   return res;
+}
+int proc_wait(void * handle) {
+  WaitForSingleObject((HANDLE) handle, INFINITE);
+  return proc__wait(handle);
+}
+
+int proc_wait_any(void ** handles, int * n) {
+  int res = WaitForMultipleObjects(n, (HANDLE *)hs, FALSE, INFINITE);
+  int got = res - WAIT_OBJECT_0;
+  if (got < 0 && got >= n) return -1;
+
+  *n = got;
+  return proc__wait(handles[got]);
 }
 
 #else // !_WIN32
@@ -175,6 +188,18 @@ int proc_wait(void * handle) {
   int status;
   waitpid((pid_t)(size_t) handle, &status, 0);
   return WEXITSTATUS(status);
+}
+
+int proc_wait_any(void ** handles, int * n) {
+  int status;
+  pid_t res = wait(&status);
+  for (int i = 0; i < *n; i++) {
+    if (res != (pid_t)(size_t) handles[i]) continue;
+
+    *n = i;
+    return WEXITSTATUS(status);
+  }
+  return -1;
 }
 
 #endif // !_WIN32
