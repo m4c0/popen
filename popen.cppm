@@ -33,6 +33,8 @@ public:
     , m_handle { proc_open(&m_out.h, &m_err.h, args..., 0) }
   {}
 
+  [[nodiscard]] auto handle() const { return m_handle; }
+
   [[nodiscard]] auto wait() const { return proc_wait(m_handle); }
 
   [[nodiscard]] const char * last_line_read() const { return m_last_line.buf; }
@@ -40,6 +42,8 @@ public:
   [[nodiscard]] bool gets()     { return m_out.gets(m_last_line); }
   [[nodiscard]] bool gets_err() { return m_err.gets(m_last_line); }
 };
+
+export int wait_any(void ** hs, int * n) { return proc_wait_any(hs, n); }
 }
 
 extern "C" void popen_perror(const char * err) { fputs(err, stderr); }
