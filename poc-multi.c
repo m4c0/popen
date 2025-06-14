@@ -16,8 +16,8 @@ int main(int argc, char ** argv) {
     pids[i] = proc_open(out + i, err + i, argv[0], "x", 0);
   }
 
-  for (int i = 0; i < 8; i++) {
-    int n = 8;
+  for (int i = 0, max = 8; i < 8; i++) {
+    int n = max;
     int res = proc_wait_any(pids, &n);
 
     char buf[1024];
@@ -28,7 +28,11 @@ int main(int argc, char ** argv) {
 
     fclose(out[n]);
     fclose(err[n]);
-    pids[n] = 0;
+
+    // We have to do this "dance" because of Windows
+    pids[n] = pids[max - 1];
+    out[n] = out[max - 1];
+    err[n] = err[max - 1];
   }
 
   return 0;
