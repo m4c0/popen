@@ -125,9 +125,9 @@ int proc_wait(void * handle) {
 }
 
 int proc_wait_any(void ** handles, int * n) {
-  int res = WaitForMultipleObjects(n, (HANDLE *)hs, FALSE, INFINITE);
+  int res = WaitForMultipleObjects(*n, (HANDLE *)handles, FALSE, INFINITE);
   int got = res - WAIT_OBJECT_0;
-  if (got < 0 && got >= n) return -1;
+  if (got < 0 && got >= *n) return -1;
 
   *n = got;
   return proc__wait(handles[got]);
