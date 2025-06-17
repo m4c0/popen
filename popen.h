@@ -53,7 +53,11 @@ static int proc__create_pipes(HANDLE *outs, HANDLE *errs) {
   attr.bInheritHandle = TRUE;
   attr.lpSecurityDescriptor = NULL;
 
-  if (!CreatePipe(outs, outs + 1, &attr, 0)) {
+  // Using large pipes to avoid deadlocking when "waiting" for a child process
+  // to finish. The 64k value is the same as Linux and kinda the maximum on
+  // Windows
+
+  if (!CreatePipe(outs, outs + 1, &attr, 64 * 1024)) {
     POPEN_ERROR("failed to create output pipe");
     return 1;
   }
@@ -62,7 +66,7 @@ static int proc__create_pipes(HANDLE *outs, HANDLE *errs) {
     return 1;
   }
 
-  if (!CreatePipe(errs, errs + 1, &attr, 0)) {
+  if (!CreatePipe(errs, errs + 1, &attr, 64 * 1024)) {
     POPEN_ERROR("failed to create error pipe");
     return 1;
   }
@@ -125,6 +129,7 @@ int proc_wait(void * handle) {
 }
 
 int proc_wait_any(void ** handles, int * n) {
+  // TODO: consider timeout, to allow pipe drainage
   int res = WaitForMultipleObjects(*n, (HANDLE *)handles, FALSE, INFINITE);
   int got = res - WAIT_OBJECT_0;
   if (got < 0 && got >= *n) return -1;
@@ -191,6 +196,8 @@ int proc_wait(void * handle) {
 }
 
 int proc_wait_any(void ** handles, int * n) {
+  // TODO: consider timeout, to allow pipe drainage
+
   int status;
   pid_t res = wait(&status);
   for (int i = 0; i < *n; i++) {
