@@ -17,7 +17,13 @@ struct cstr : no::no {
 struct file : no::no {
   FILE * h;
   ~file() { fclose(h); }
-  [[nodiscard]] bool gets(cstr & s) { return fgets(s.buf, cstr_buf_size - 1, h); }
+  [[nodiscard]] bool gets(cstr & s) {
+    if (!fgets(s.buf, cstr_buf_size - 1, h)) return false;
+    auto * p = s.buf + strlen(s.buf) - 1;
+    if (*p == '\n') *p-- = 0;
+    if (*p == '\r') *p-- = 0;
+    return true;
+  }
 };
 
 export class proc {

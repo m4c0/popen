@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
   p::proc proc { argv[0], "X" };
   while (proc.gets()) {
-    put("> ", proc.last_line_read());
+    putln("> ", proc.last_line_read());
   }
   putln("popen ended with code: ", proc.wait());
   return 0;
