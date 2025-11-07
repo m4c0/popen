@@ -6,6 +6,7 @@ extern "C" {
 #include <stdio.h>
 
 extern void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...);
+extern void * proc_openv(FILE **out, FILE **err, int argc, const char * const * argv);
 extern int    proc_wait(void * p);
 extern int    proc_wait_any(void ** ps, int * n);
 
@@ -90,11 +91,20 @@ static int proc__fdopen(HANDLE h, FILE **f) {
   }
   return 0;
 }
-void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
+static void * proc__open(FILE **out, FILE **err, const char * buf) {
   HANDLE outs[2];
   HANDLE errs[2];
   if (0 != proc__create_pipes(outs, errs)) return NULL;
 
+  HANDLE res = proc__create_process(buf, outs[1], errs[1]);
+  if (!res) return NULL;
+
+  if (0 != proc__fdopen(outs[0], out)) return NULL;
+  if (0 != proc__fdopen(errs[0], err)) return NULL;
+
+  return res;
+}
+void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
   char buf[10240];
   strcpy_s(buf, sizeof(buf), argv0);
 
@@ -107,13 +117,18 @@ void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated 
   }
   va_end(va);
 
-  HANDLE res = proc__create_process(buf, outs[1], errs[1]);
-  if (!res) return NULL;
+  return proc__open(out, err, buf);
+}
+void * proc_openv(FILE **out, FILE **err, int argc, const char * const * argv) {
+  char buf[10240] = { 0 };
 
-  if (0 != proc__fdopen(outs[0], out)) return NULL;
-  if (0 != proc__fdopen(errs[0], err)) return NULL;
+  strcpy_s(buf, sizeof(buf), argv[0]);
+  for (int i = 1; i < argc; i++) {
+    strcat_s(buf, sizeof(buf), " ");
+    strcat_s(buf, sizeof(buf), arg);
+  }
 
-  return res;
+  return proc__open(out, err, buf);
 }
 
 int proc__wait(void * handle) {
@@ -145,7 +160,7 @@ int proc_wait_any(void ** handles, int * n) {
 #include <string.h>
 #include <unistd.h>
 
-void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
+static void * proc__open(FILE **out, FILE **err, char ** args) {
   int pout[2];
   if (0 != pipe(pout))
     return 0;
@@ -165,21 +180,12 @@ void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated 
     dup2(pout[1], 1);
     dup2(perr[1], 2);
 
-    char ** args = (char **)malloc(sizeof(char *) * 1024);
-    char ** argp = args + 1;
-    args[0] = strdup(argv0);
-
-    va_list va;
-    va_start(va, argv0);
-    const char * arg;
-    while ((arg = va_arg(va, const char *))) *argp++ = strdup(arg);
-    va_end(va);
-
-    *argp = 0;
-
-    execvp(argv0, args);
+    execvp(args[0], args);
     return 0;
   }
+
+  for (char ** p = args; *p; p++) free(*p);
+  free(args);
 
   close(pout[1]);
   close(perr[1]);
@@ -187,6 +193,28 @@ void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated 
   *out = fdopen(pout[0], "r");
   *err = fdopen(perr[0], "r");
   return (void *)(size_t)pid;
+}
+void * proc_open(FILE **out, FILE **err, const char * argv0, /* null-terminated argv */...) {
+  char ** args = (char **)malloc(sizeof(char *) * 1024);
+  char ** argp = args + 1;
+  args[0] = strdup(argv0);
+
+  va_list va;
+  va_start(va, argv0);
+  const char * arg;
+  while ((arg = va_arg(va, const char *))) *argp++ = strdup(arg);
+  va_end(va);
+
+  *argp = 0;
+
+  return proc__open(out, err, args);
+}
+void * proc_openv(FILE **out, FILE **err, int argc, const char * const * argv) {
+  char ** args = (char **)malloc(sizeof(char *) * (argc + 1));
+  for (int i = 0; i < argc; i++) args[i] = strdup(argv[i]);
+  args[argc] = 0;
+
+  return proc__open(out, err, args);
 }
 
 int proc_wait(void * handle) {
