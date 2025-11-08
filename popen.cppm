@@ -33,7 +33,7 @@ export class proc {
   void * m_handle;
 
 public:
-  explicit proc(int argc, const char * const * argv) :
+  explicit proc(int argc, const char ** argv) :
     m_out {}
   , m_err {}
   , m_handle { proc_openv(&m_out.h, &m_err.h, argc, argv) }

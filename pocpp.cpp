@@ -13,7 +13,12 @@ int main(int argc, char **argv) {
     return 3;
   }
 
+#if 0
   p::proc proc { argv[0], "X" };
+#else
+  const char * args[] { argv[0], "X" };
+  p::proc proc { 2, args };
+#endif
   while (proc.gets()) {
     putln("> ", proc.last_line_read());
   }
