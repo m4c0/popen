@@ -91,7 +91,7 @@ static int proc__fdopen(HANDLE h, FILE **f) {
   }
   return 0;
 }
-static void * proc__open(FILE **out, FILE **err, const char * buf) {
+static void * proc__open(FILE **out, FILE **err, char * buf) {
   HANDLE outs[2];
   HANDLE errs[2];
   if (0 != proc__create_pipes(outs, errs)) return NULL;
@@ -125,7 +125,7 @@ void * proc_openv(FILE **out, FILE **err, int argc, const char * const * argv) {
   strcpy_s(buf, sizeof(buf), argv[0]);
   for (int i = 1; i < argc; i++) {
     strcat_s(buf, sizeof(buf), " ");
-    strcat_s(buf, sizeof(buf), arg);
+    strcat_s(buf, sizeof(buf), argv[i]);
   }
 
   return proc__open(out, err, buf);
