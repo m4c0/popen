@@ -145,7 +145,7 @@ int proc_wait(void * handle) {
 
 int proc_wait_any(void ** handles, int * n) {
   // TODO: consider timeout, to allow pipe drainage
-  int res = WaitForMultipleObjects(*n, (HANDLE *)handles, FALSE, INFINITE);
+  int res = WaitForMultipleObjects(*n, (HANDLE *)handles, FALSE, 1000);
   int got = res - WAIT_OBJECT_0;
   if (got < 0 && got >= *n) return -1;
 
